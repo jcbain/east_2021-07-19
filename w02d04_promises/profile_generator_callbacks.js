@@ -21,6 +21,7 @@ rl.question("What do you think of Node.js? ", (answer) => {
             answers.push(answer);
             rl.question("Which sport is your favorite? ", (answer) => {
               answers.push(answer);
+              
               rl.close();
               const node = answers[0];
               const name = answers[1];

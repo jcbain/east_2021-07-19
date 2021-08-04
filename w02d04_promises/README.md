@@ -124,4 +124,3 @@ myPromise.then((data) => {
 ```
 
 
-
