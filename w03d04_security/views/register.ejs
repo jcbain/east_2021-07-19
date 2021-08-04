@@ -27,5 +27,8 @@
 
     <button type="submit">Register!</button>
   </form>
+  <% if (regError) { %>
+    <h3><%= regError %></h3>
+  <% } %>
 </body>
 </html>

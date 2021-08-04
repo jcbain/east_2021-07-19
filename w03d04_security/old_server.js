@@ -44,24 +44,25 @@ const findUserByEmail = (email) => {
 
 
 app.get('/', (req, res) => {
-  res.render('login');
+  const error = req.cookies.error
+  const templateVars = { error: error ? error : null}
+  res.render('login', templateVars);
 })
 
 app.get('/register', (req, res) => {
-  res.render('register')
+  const regError = req.cookies.regError
+  const templateVars = { regError: regError ? regError: null}
+  res.render('register', templateVars)
 })
 
 app.get('/protected', (req, res) => {
   const userId = req.cookies.userId;
 
-  if (!userId) {
-    return res.status(401).send('you are not authorized to be here')
-  }
-
   const user = users[userId];
 
   if (!user) {
-    return res.status(400).send('you have an old cookie! git gud!')
+    res.cookie('error', 'not logged in')
+    return res.redirect('/')
   }
   
   const templateVars = { user }
@@ -71,26 +72,30 @@ app.get('/protected', (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
+  
 
   if(!email || !password){
-    return res.status(400).send('email and password cannot be blank');
+    res.cookie('error', 'email and password can not be blank')
+    return res.redirect('/')
   }
 
   const user = findUserByEmail(email);
 
   // we didn't find user
   if (!user) {
-    return res.status(400).send('no user with that email found')
+    res.cookie('error', 'no user with than email found')
+    return res.redirect('/')
   }
 
   // found the user, now does their password match?
   if (user.password !== password) {
-    return res.status(400).send('password does not match')
+    res.cookie('error', 'incorrect password')
+    return res.redirect('/')
   }
 
   // happy path
   res.cookie('userId', user.id);
-
+  res.clearCookie('error')
   res.redirect('/protected')
 
 })
@@ -101,13 +106,15 @@ app.post('/register', (req, res) => {
   const superSecret = req.body.superSecret
 
   if (!email || !password) {
-    return res.status(400).send('email and password cannot be blank');
+    res.cookie('regError', 'email and password can not be blank')
+    return res.redirect('/register')
   }
 
   const user = findUserByEmail(email);
 
   if (user) {
-    return res.status(400).send('the email address is alread in use')
+    res.cookie('regError', 'email already exists')
+    return res.redirect('/register')
   }
 
   const id = Math.floor(Math.random() * 1000) + 1;
@@ -119,6 +126,8 @@ app.post('/register', (req, res) => {
     superSecret
   }
 
+  res.clearCookie('regError')
+  res.clearCookie('error');
   res.redirect('/')
 })
 
