@@ -1,6 +1,10 @@
 const express = require('express');
 const morgan = require('morgan');
-const cookieParser = require('cookie-parser');
+// const cookieParser = require('cookie-parser');
+// bring in bcrypt
+const bcrypt = require('bcryptjs');
+const cookieSession = require('cookie-session')
+
 
 const app = express();
 const port = 8080;
@@ -23,7 +27,12 @@ const users = {
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static('public'));
-app.use(cookieParser());
+// app.use(cookieParser());
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2']
+}))
 
 app.set('view engine', 'ejs');
 
@@ -54,7 +63,8 @@ app.get('/register', (req, res) => {
 
 // GET /protected --> protected page for logged in users
 app.get('/protected', (req, res) => {
-  const userId = req.cookies.userId;
+  const userId = req.session.userId;
+  // console.log('req.session', req.session)
 
   if (!userId) {
     return res.status(401).send('you are not authorized to be here')
@@ -87,14 +97,27 @@ app.post('/login', (req, res) => {
   }
 
   // found the user, now does their password match?
-  if (user.password !== password) {
-    return res.status(400).send('password does not match')
-  }
+  bcrypt.compare(password, user.password, (err, success) => {
+    // if passwords did not match
+    if (!success) {
+      return res.status(400).send('password does not match')
+    }
+    // otherwise login set a cookie
+    // res.cookie('userId', user.id);
+    // encrypt cookies
+    req.session.userId = user.id
+    res.redirect('/protected')
+  
+  })
 
-  // happy path
-  res.cookie('userId', user.id);
+  // if (user.password !== password) {
+  //   return res.status(400).send('password does not match')
+  // }
 
-  res.redirect('/protected')
+  // // happy path
+  // res.cookie('userId', user.id);
+
+  // res.redirect('/protected')
 
 })
 
@@ -115,20 +138,46 @@ app.post('/register', (req, res) => {
   }
 
   const id = Math.floor(Math.random() * 1000) + 1;
+  //async
+  // bcrypt.genSalt(10, (err, salt) => {
+  //   bcrypt.hash(password, salt, (err, hash) => {
+      
+  //     // store hashed password in user object
+  //     users[id] = {
+  //       id, 
+  //       email,
+  //       password: hash,
+  //       superSecret
+  //     }
 
-  users[id] = {
-    id, 
-    email,
-    password,
-    superSecret
-  }
+  //     console.log('users', users)
 
-  res.redirect('/')
+  //     res.redirect('/')
+  //   })
+  // })
+  
+  // sync
+  // generate salt
+  const salt = bcrypt.genSaltSync(10)
+  const hash = bcrypt.hashSync(password, salt);
+
+    users[id] = {
+      id, 
+      email,
+      password: hash,
+      superSecret
+    }
+    console.log('users sync', users)
+
+    res.redirect('/')
+
+
 })
 
 // POST /logout --> logout form
 app.post('/logout', (req, res) => {
-  res.clearCookie('userId');
+  // res.clearCookie('userId');
+  req.session = null;
   res.redirect('/')
 })
 
